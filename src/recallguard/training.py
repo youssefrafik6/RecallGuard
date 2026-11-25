@@ -11,6 +11,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
     brier_score_loss,
+    f1_score,
     log_loss,
     precision_recall_curve,
 )
@@ -27,11 +28,39 @@ FEATURE_SETS = {
     "all": {"word", "character", "category", "numeric"},
     "text": {"word", "character"},
     "word": {"word"},
+    "fielded": {
+        "product_word",
+        "product_character",
+        "description_word",
+        "category",
+        "numeric",
+    },
 }
 
 
-def preprocessing(feature_set: str) -> ColumnTransformer:
+def preprocessing(
+    feature_set: str, empty_fields: set[str] | None = None
+) -> ColumnTransformer:
     blocks = [
+        (
+            "product_word",
+            TfidfVectorizer(
+                ngram_range=(1, 2), max_features=6000, token_pattern=r"(?u)\b\w+\b"
+            ),
+            "product",
+        ),
+        (
+            "product_character",
+            TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), max_features=5000),
+            "product",
+        ),
+        (
+            "description_word",
+            TfidfVectorizer(
+                ngram_range=(1, 2), max_features=5000, token_pattern=r"(?u)\b\w+\b"
+            ),
+            "description",
+        ),
         ("word", TfidfVectorizer(ngram_range=(1, 2), max_features=8000), "text"),
         (
             "character",
@@ -45,8 +74,14 @@ def preprocessing(feature_set: str) -> ColumnTransformer:
         ),
         ("numeric", MaxAbsScaler(), ["word_count"]),
     ]
+    empty_fields = empty_fields or set()
     return ColumnTransformer(
-        [block for block in blocks if block[0] in FEATURE_SETS[feature_set]],
+        [
+            block
+            for block in blocks
+            if block[0] in FEATURE_SETS[feature_set]
+            and not (isinstance(block[2], str) and block[2] in empty_fields)
+        ],
         sparse_threshold=1.0,
     )
 
@@ -120,8 +155,17 @@ def threshold_for(target, scores) -> float:
     return float(thresholds[np.argmax(combined)])
 
 
-def train(frame, design: str, seed: int, feature_set: str, smoke: bool = False) -> dict:
+def train(
+    frame,
+    design: str,
+    seed: int,
+    feature_set: str,
+    smoke: bool = False,
+    selection: str = "average_precision",
+) -> dict:
     """Freeze variant and threshold choices before computing held-out metrics."""
+    if selection not in {"average_precision", "f1"}:
+        raise ValueError(f"Unknown validation selection metric {selection}")
     (training, validation, calibration, test), groups = partitions(frame, design, seed)
     x_train, x_val, x_cal, x_test = map(
         feature_frame, (training, validation, calibration, test)
@@ -129,7 +173,10 @@ def train(frame, design: str, seed: int, feature_set: str, smoke: bool = False) 
     y_train, y_val, y_cal, y_test = (
         part[TARGET] for part in (training, validation, calibration, test)
     )
-    preprocessor = preprocessing(feature_set).fit(x_train)
+    empty_fields = {
+        field for field in ("product", "description") if x_train[field].eq("").all()
+    }
+    preprocessor = preprocessing(feature_set, empty_fields).fit(x_train)
     transformed = preprocessor.transform(x_train)
     positives = np.flatnonzero(y_train.to_numpy() == 1)
     ratio = (len(y_train) - len(positives)) / len(positives)
@@ -153,18 +200,33 @@ def train(frame, design: str, seed: int, feature_set: str, smoke: bool = False) 
         pipeline = Pipeline([("preprocess", preprocessor), ("classifier", classifier)])
         val_raw = raw_scores(pipeline, x_val)
         ap = float(average_precision_score(y_val, val_raw))
+        validation_f1 = float(f1_score(y_val, val_raw >= threshold_for(y_val, val_raw)))
+        objective = (validation_f1, ap) if selection == "f1" else (ap,)
         variants.append(
-            {"model": family, "variant": variant, "validation_average_precision": ap}
+            {
+                "model": family,
+                "variant": variant,
+                "validation_average_precision": ap,
+                "validation_f1": validation_f1,
+            }
         )
-        if family not in selected or ap > selected[family][0]:
-            selected[family] = (ap, variant, pipeline, val_raw)
+        if family not in selected or objective > selected[family][0]:
+            selected[family] = (
+                objective,
+                variant,
+                pipeline,
+                val_raw,
+                ap,
+                validation_f1,
+            )
 
     winner = max(
-        selected, key=lambda family: selected[family][0] if family != "dummy" else -1.0
+        (family for family in selected if family != "dummy"),
+        key=lambda family: selected[family][0],
     )
     comparisons = {}
     artifact = {}
-    for family, (ap, variant, pipeline, val_raw) in selected.items():
+    for family, (_, variant, pipeline, val_raw, ap, validation_f1) in selected.items():
         calibration_raw = raw_scores(pipeline, x_cal)
         calibrator = LogisticRegression(C=10.0, solver="lbfgs").fit(
             calibration_raw.reshape(-1, 1), y_cal
@@ -185,6 +247,7 @@ def train(frame, design: str, seed: int, feature_set: str, smoke: bool = False) 
             **report,
             "variant": variant,
             "validation_average_precision": ap,
+            "validation_f1": validation_f1,
             "threshold": threshold,
             "default_threshold_f1": default["f1"],
             "brier": brier_score_loss(y_test, scores),
@@ -243,6 +306,7 @@ def train(frame, design: str, seed: int, feature_set: str, smoke: bool = False) 
             "feature_set": feature_set,
             "smoke": smoke,
             "selected": winner,
+            "selection": selection,
             "partitions": summaries,
             "excluded_rows": len(frame)
             - sum(map(len, (training, validation, calibration, test))),

@@ -275,3 +275,15 @@ def test_description_identifier_linkage():
         ("INVALID", "CORROBORATED"): "rejected",
     }
     assert not matches.loc[matches.report_id.eq("INVALID"), "gtin_exact"].any()
+
+
+def test_f1_selection_with_fielded_text(historical):
+    frame = historical.assign(description="")
+    bundle = train(frame, "group", 42, "fielded", smoke=True, selection="f1")
+    metadata = bundle["metadata"]
+    assert metadata["selection"] == "f1"
+    report = metadata["comparison"][metadata["selected"]]
+    assert 0 <= report["validation_f1"] <= 1
+    names = bundle["pipeline"].named_steps["preprocess"].get_feature_names_out()
+    assert any(name.startswith("product_word__") for name in names)
+    assert all(not name.startswith("description_word__") for name in names)

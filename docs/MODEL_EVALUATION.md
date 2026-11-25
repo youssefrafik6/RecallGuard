@@ -23,3 +23,22 @@ AP measures ranking among rare positives. F1 gives equal weight to positive-clas
 Word and character TF-IDF, categorical encoders and a scaled description-length feature are fitted once on training only and reused across candidates. Logistic regression compares class weights, regularization and seeded random oversampling. Linear SVM compares regularization and class weights. XGBoost compares training positive weights. Complement NB sweeps smoothing. Random oversampling duplicates training positives only. Historical sparse-text SMOTE remains documented in the original code history. Category metrics are slices with at least 20 test examples and both classes.
 
 A regularized sigmoid is fitted on the independent calibration split. A negative fitted slope is replaced by a constant calibration model. Brier score, log loss and quantile reliability points are evaluated on test. The high-priority boundary maximizes proxy F1 on validation. Moderate starts at the lower of that boundary and the 75th percentile validation score. When the boundaries coincide, the moderate band is empty. These values express relative review priority under the benchmark's sample distribution.
+
+## F1-focused product-grouped follow-up
+
+The original product-grouped split (seed 42, 755 test reports, 83 positives) was reused for an exploratory comparison. The new selection option ranks model variants by their best validation F1, with validation AP breaking ties. The threshold is chosen on validation after independent sigmoid calibration. The fielded representation fits product name word and character n-grams separately from incident narrative word n-grams, retaining the existing categorical and numeric features.
+
+| Configuration | Held-out F1 | Precision | Recall | AP | TP | FP |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Original combined text, AP selection | 0.402 | 0.407 | 0.398 | 0.412 | 33 | 48 |
+| Combined text, F1 selection | 0.386 | 0.452 | 0.337 | 0.393 | 28 | 34 |
+| Separate product and narrative text, F1 selection | 0.455 | 0.532 | 0.398 | 0.400 | 33 | 29 |
+
+The fielded run selected unweighted logistic regression with `C=1.0`. Its validation F1 was 0.519 and its frozen calibrated threshold was 0.2295. Its 0.053 absolute F1 gain reflects fewer false positives at the same recall. The AP decline shows the gain is specific to the operating point. Because the holdout was previously inspected, this result needs confirmation on a fresh grouped sample. This experiment did not rerun chronological evaluation.
+
+```bash
+recallguard train --design group --selection f1 --out results/runs/f1-group
+recallguard train --design group --selection f1 --feature-set fielded \
+  --out results/runs/f1-fielded
+RECALLGUARD_MODEL=results/runs/f1-fielded/group.joblib streamlit run app.py
+```

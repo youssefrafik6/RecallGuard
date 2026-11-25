@@ -255,8 +255,9 @@ elif page == "Model performance":
     st.write(
         f"{metadata['dataset']} · {metadata['design']} holdout · seed {metadata['seed']}"
     )
+    criterion = "F1" if metadata.get("selection") == "f1" else "average precision"
     st.caption(
-        f"Selected using validation average precision: {metadata['selected']}. "
+        f"Selected using validation {criterion}: {metadata['selected']}. "
         "Positive labels are rare and the dataset was sampled."
     )
     fields = [

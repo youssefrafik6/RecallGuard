@@ -52,6 +52,9 @@ def main() -> None:
     fit.add_argument("--feature-set", choices=FEATURE_SETS, default="all")
     fit.add_argument("--seed", type=int, default=42)
     fit.add_argument("--smoke", action="store_true")
+    fit.add_argument(
+        "--selection", choices=["average_precision", "f1"], default="average_precision"
+    )
     for name in ("predict", "model-info"):
         sub = commands.add_parser(name)
         sub.add_argument("--trusted-model", required=True, type=Path)
@@ -105,7 +108,14 @@ def main() -> None:
         )
         args.out.mkdir(parents=True, exist_ok=True)
         for design in designs:
-            bundle = train(frame, design, args.seed, args.feature_set, args.smoke)
+            bundle = train(
+                frame,
+                design,
+                args.seed,
+                args.feature_set,
+                args.smoke,
+                selection=args.selection,
+            )
             bundle["metadata"].update(
                 dataset=args.data.name, dataset_sha256=data_sha256
             )

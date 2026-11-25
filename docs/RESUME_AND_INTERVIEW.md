@@ -6,7 +6,7 @@ RecallGuard links CPSC consumer incident reports to official recall listings and
 
 ## Resume bullets
 
-- Built a bounded CPSC record-linkage workflow that audited 1.14 million candidate pairs from 65,058 incident reports and 9,624 validated recall listings, preserving evidence and unresolved labels for review.
+- Built a bounded CPSC record-linkage workflow that audited 1.14 million candidate pairs from 65,058 incident reports and 9,623 validated recall listings. Added model and UPC matching that recovered 204 of 207 date-eligible pairs in a historical audit.
 - Benchmarked sparse TF-IDF classifiers and imbalance strategies on 3,780 historical observations. Quantified how held-out performance changed when products were separated and a later reporting period was held out.
 - Packaged a reproducible training CLI and shared inference layer for Streamlit and FastAPI, with pytest coverage, Docker, and a GitHub Actions workflow.
 

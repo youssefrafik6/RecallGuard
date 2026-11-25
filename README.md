@@ -79,7 +79,8 @@ It demonstrates how the project can be used as a practical product risk-assessme
 ```text
 .
 ├── app.py
-├── training_data.csv
+├── data/
+│   └── training_data.csv
 ├── requirements.txt
 ├── README.md
 ├── screenshots/

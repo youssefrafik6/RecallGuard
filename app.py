@@ -173,7 +173,7 @@ div[data-testid="stMetric"] [data-testid="stMetricValue"] {
 # - stopwords for TF-IDF
 # - required column names
 
-DATA_PATH = os.path.join(os.path.dirname(__file__), "training_data.csv")
+DATA_PATH = os.path.join(os.path.dirname(__file__), "data", "training_data.csv")
 
 
 HAZARD_WORDS = {

@@ -77,11 +77,27 @@ It demonstrates how the project can be used as a practical product risk-assessme
 ## Repository Structure
 
 ```text
-.
-├── app.py
+RecallGuard/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── app.py                                 # Existing Streamlit launch entry point
+├── app/
+│   └── streamlit_app.py
 ├── data/
 │   └── training_data.csv
-├── requirements.txt
-├── README.md
-├── screenshots/
-└── slides/
+├── presentations/
+│   └── RecallGuard_Capstone_Project.pdf
+└── screenshots/
+    └── capstone-dashboard.pdf
+```
+
+Run from the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+streamlit run app.py
+```
+
+You can also launch the application directly with `streamlit run app/streamlit_app.py`.

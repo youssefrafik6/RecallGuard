@@ -55,7 +55,7 @@ flowchart TD
     A --> U
 ```
 
-The reconstructed linker bounds candidate expansion through rare product and manufacturer tokens and scores product-name overlap, fuzzy similarity, and manufacturer or brand agreement. Date and ambiguity checks protect the proxy label. Four incidents met the unique high-confidence rule on the available local exports. Unresolved incidents remain unlabeled. The historical CSV supplies the supervised benchmark while these reconstructed links await adjudication. [Data pipeline](docs/DATA_PIPELINE.md) · [Scientific validity](docs/SCIENTIFIC_VALIDITY.md)
+The reconstructed linker combines rare-token blocking with exact model codes and checksum-valid UPC/GTINs extracted from recall listings. A replay recovered 204 of 207 date-eligible links from the earlier match audit, up from 170 with text-only blocking. The full run identified 146 unique high-confidence proxy labels, up from four. These measure coverage and heuristic yield. The historical CSV supplies the supervised benchmark while reconstructed links await adjudication. [Data pipeline](docs/DATA_PIPELINE.md) · [Linkage benchmark](results/metrics/linkage_reference_benchmark.json) · [Scientific validity](docs/SCIENTIFIC_VALIDITY.md)
 
 Models compare sparse word and character TF-IDF, optional structured product fields, and incident text length using pandas, scikit-learn, and XGBoost. The benchmark includes a dummy prior, logistic regression, Linear SVM, Complement NB, and XGBoost. Each run records its data fingerprint, chosen model, threshold, metrics and environment versions.
 

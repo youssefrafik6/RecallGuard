@@ -226,3 +226,52 @@ def test_streamlit_pages(monkeypatch, artifact):
     page.button[0].click().run()
     assert not page.exception
     assert len(page.metric) == 2
+
+
+def test_description_identifier_linkage():
+    date = pd.Timestamp("2025-04-01")
+    recalls = pd.DataFrame(
+        [
+            {
+                "recall_id": key,
+                "product": "Countertop appliance",
+                "heading": "",
+                "manufacturer": maker,
+                "recall_date": recall_date,
+                "recall_description": description,
+            }
+            for key, maker, recall_date, description in [
+                ("CORROBORATED", "Teal", date, "Affected models RG-431X"),
+                ("AMBIGUOUS", "Different", date, "Affected models RG-431X"),
+                ("PAST", "Teal", pd.Timestamp("2023-04-01"), "Affected models RG-431X"),
+                ("UPC", "Different", date, "UPC 036000291452"),
+            ]
+        ]
+    )
+    incidents = pd.DataFrame(
+        [
+            {
+                "report_id": key,
+                "product": "",
+                "brand": "",
+                "manufacturer": "Teal LLC",
+                "report_date": pd.Timestamp("2025-01-01"),
+                "model": model,
+                "upc": upc,
+            }
+            for key, model, upc in [
+                ("MODEL", "RG431X", ""),
+                ("GTIN", "", "0036000291452"),
+                ("INVALID", "", "036000291453"),
+            ]
+        ]
+    )
+    matches = link(incidents, recalls, LinkageConfig(max_candidates=1))
+    assert matches.set_index(["report_id", "recall_id"]).confidence.to_dict() == {
+        ("MODEL", "CORROBORATED"): "high",
+        ("MODEL", "AMBIGUOUS"): "review",
+        ("MODEL", "PAST"): "rejected",
+        ("GTIN", "UPC"): "high",
+        ("INVALID", "CORROBORATED"): "rejected",
+    }
+    assert not matches.loc[matches.report_id.eq("INVALID"), "gtin_exact"].any()

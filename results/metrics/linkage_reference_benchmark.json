@@ -1,0 +1,54 @@
+{
+  "definition": "Agreement with earlier algorithmic links; no independent ground truth",
+  "reference_sha256": "ff832a34d97c9ced2968d195d57230ec53fa293b5bdfad880a8684a704f5d754",
+  "text_only": {
+    "revision": "26adc8e",
+    "all": {
+      "reference_pairs": 416,
+      "candidate_pairs": 337,
+      "review_pairs": 5,
+      "high_pairs": 1
+    },
+    "date_eligible": {
+      "reference_pairs": 207,
+      "candidate_pairs": 170,
+      "review_pairs": 5,
+      "high_pairs": 1
+    },
+    "unique_proxy_positives": 4
+  },
+  "identifier_aware": {
+    "all": {
+      "reference_pairs": 416,
+      "candidate_pairs": 390,
+      "review_pairs": 18,
+      "high_pairs": 115
+    },
+    "date_eligible": {
+      "reference_pairs": 207,
+      "candidate_pairs": 204,
+      "review_pairs": 18,
+      "high_pairs": 115
+    },
+    "raw_run": {
+      "incidents": 65058,
+      "recalls": 9623,
+      "candidates": 1144551,
+      "linked": 146,
+      "candidate_confidence_counts": {
+        "rejected": 1144196,
+        "review": 207,
+        "high": 148
+      },
+      "config": {
+        "high": 0.82,
+        "review": 0.57,
+        "max_block": 75,
+        "max_candidates": 18,
+        "horizon_days": 365
+      },
+      "incident_sha256": "0d1a97125fcbabb751804f9d01c713ccca2e874b3d03c3681c5c08dffacdc2ac",
+      "recall_sha256": "3c0ed24dd0171043efaf98db5b50dcb2c4a0288172dd2b1b381294c35e5c7bee"
+    }
+  }
+}

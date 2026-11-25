@@ -8,9 +8,17 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+import pandas as pd
+
 from recallguard.data import FEATURES, TARGET, load_incidents, load_recalls
 from recallguard.inference import IncidentRequest, load_model, predict, save_model
-from recallguard.linkage import LinkageConfig, construct_labels, link, review_sample
+from recallguard.linkage import (
+    LinkageConfig,
+    construct_labels,
+    link,
+    reference_coverage,
+    review_sample,
+)
 from recallguard.training import FEATURE_SETS, train
 
 
@@ -29,6 +37,12 @@ def main() -> None:
     prepare.add_argument("--high", type=float, default=0.82)
     prepare.add_argument("--review", type=float, default=0.57)
     prepare.add_argument("--horizon", type=int, default=365)
+    check = commands.add_parser(
+        "check-linkage", help="Compare candidate coverage with an earlier match audit"
+    )
+    check.add_argument("--candidates", required=True, type=Path)
+    check.add_argument("--reference", required=True, type=Path)
+    check.add_argument("--horizon", type=int, default=365)
     fit = commands.add_parser("train")
     fit.add_argument("--data", type=Path, default=Path("training_data.csv"))
     fit.add_argument("--out", type=Path, default=Path("results/runs"))
@@ -68,6 +82,19 @@ def main() -> None:
         }
         (args.out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
         print(json.dumps(summary))
+    elif args.command == "check-linkage":
+        candidates = pd.read_csv(
+            args.candidates, usecols=["report_id", "recall_id", "confidence"], dtype=str
+        )
+        mappings = {"Report No.": "report_id", "Recall Number": "recall_id"}
+        reference = pd.read_csv(
+            args.reference,
+            usecols=[*mappings, "Report Date", "Date"],
+            dtype=str,
+            keep_default_na=False,
+        ).rename(columns=mappings)
+        coverage = reference_coverage(candidates, reference, args.horizon)
+        print(json.dumps(coverage, indent=2))
     elif args.command == "train":
         frame = load_incidents(args.data, labeled=True)
         data_sha256 = fingerprint(args.data)

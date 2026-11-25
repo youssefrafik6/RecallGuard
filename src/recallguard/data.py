@@ -26,6 +26,7 @@ RECALL = {
     "Date": "recall_date",
     "Name of product": "product",
     "Recall Heading": "heading",
+    "Description": "recall_description",
     "Manufacturers": "manufacturer",
     "Product Safety Warning Number": "warning_id",
 }

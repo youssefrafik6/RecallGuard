@@ -1,5 +1,6 @@
 """Generate reviewable recall candidates using rare product token blocks."""
 
+import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -40,17 +41,59 @@ def jaccard(left: set[str], right: set[str]) -> float:
     return len(left & right) / len(left | right) if left and right else 0.0
 
 
+MODEL_TOKEN = re.compile(r"(?<![a-z0-9])[a-z0-9]+(?:[-./][a-z0-9]+)*(?![a-z0-9])", re.I)
+GTIN_TOKEN = re.compile(r"(?<![0-9])[0-9]{8,14}(?![0-9])")
+
+
+def model_codes(text: str) -> set[str]:
+    """Extract exact mixed letter/digit identifiers, including punctuated model codes."""
+    codes = set()
+    for token in MODEL_TOKEN.findall(text.casefold()):
+        code = re.sub(r"[^a-z0-9]", "", token)
+        if (
+            5 <= len(code) <= 24
+            and re.search(r"[a-z]", code)
+            and re.search(r"[0-9]", code)
+        ):
+            codes.add(code)
+    return codes
+
+
+def gtin_codes(text: str) -> set[str]:
+    """Recognize checksum-valid GTINs and normalize equivalent padding."""
+    codes = set()
+    for code in GTIN_TOKEN.findall(text):
+        if len(code) not in {8, 12, 13, 14} or len(set(code)) == 1:
+            continue
+        weighted = sum(
+            int(digit) * (3 if index % 2 else 1)
+            for index, digit in enumerate(reversed(code))
+        )
+        if weighted % 10 == 0:
+            codes.add(code.zfill(14))
+    return codes
+
+
 def link(
     incidents: pd.DataFrame, recalls: pd.DataFrame, config: LinkageConfig
 ) -> pd.DataFrame:
     """Score bounded candidate pairs and keep evidence for accepted and rejected matches."""
     catalog = {}
     blocks = defaultdict(list)
+    model_blocks = defaultdict(list)
+    gtin_blocks = defaultdict(list)
     for recall in recalls.itertuples(index=False):
         product = normalize(recall.product)
         product_tokens = tokens(product)
         heading_tokens = tokens(recall.heading)
         maker = manufacturer_key(recall.manufacturer)
+        listing = " ".join(
+            (recall.product, recall.heading, getattr(recall, "recall_description", ""))
+        )
+        for code in model_codes(listing):
+            model_blocks[code].append(recall.recall_id)
+        for code in gtin_codes(listing):
+            gtin_blocks[code].append(recall.recall_id)
         catalog[recall.recall_id] = (
             recall,
             product,
@@ -73,15 +116,40 @@ def link(
             if len(blocks.get(token, ())) <= config.max_block
             for candidate in blocks.get(token, ())
         )
-        ranked = sorted(votes, key=lambda item: (-votes[item], item))[
-            : config.max_candidates
-        ]
-        for recall_id in ranked:
-            recall, name, name_tokens, heading, recalled_maker = catalog[recall_id]
-            date_known = pd.notna(recall.recall_date) and pd.notna(incident.report_date)
-            days = (
-                (recall.recall_date - incident.report_date).days if date_known else None
-            )
+        models = {
+            recall_id
+            for code in model_codes(getattr(incident, "model", ""))
+            for recall_id in model_blocks.get(code, ())
+            if len(model_blocks[code]) <= config.max_block
+        }
+        gtins = {
+            recall_id
+            for code in gtin_codes(getattr(incident, "upc", ""))
+            for recall_id in gtin_blocks.get(code, ())
+        }
+        candidates = votes.keys() | models | gtins
+        offsets = {
+            key: (catalog[key][0].recall_date - incident.report_date).days
+            if pd.notna(catalog[key][0].recall_date) and pd.notna(incident.report_date)
+            else None
+            for key in candidates
+        }
+        ranked = sorted(
+            candidates,
+            key=lambda key: (
+                key not in gtins,
+                key not in models,
+                offsets[key] is None or not 0 < offsets[key] <= config.horizon_days,
+                -votes[key],
+                key,
+            ),
+        )[: config.max_candidates]
+        # Preserve every direct identifier candidate so competing matches stay visible.
+        for recall_id in [*ranked, *sorted((models | gtins).difference(ranked))]:
+            _, name, name_tokens, heading, recalled_maker = catalog[recall_id]
+            days = offsets[recall_id]
+            model_hit = recall_id in models
+            gtin_hit = recall_id in gtins
             overlap = jaccard(product_tokens, name_tokens)
             fuzzy = (
                 SequenceMatcher(None, product, name).ratio()
@@ -95,6 +163,18 @@ def link(
                 status, reason = (
                     "rejected",
                     "Date missing or outside future linkage window",
+                )
+            elif gtin_hit:
+                status, reason = "high", "Exact checksum-valid GTIN"
+            elif model_hit and (identity or brand_hit):
+                status, reason = (
+                    "high",
+                    "Exact model code and manufacturer or brand agreement",
+                )
+            elif model_hit:
+                status, reason = (
+                    "review",
+                    "Exact model code without corroborating identity",
                 )
             elif not product_tokens & name_tokens:
                 status, reason = "rejected", "No shared product-name tokens"
@@ -117,6 +197,8 @@ def link(
                     fuzzy,
                     identity,
                     brand_hit,
+                    model_hit,
+                    gtin_hit,
                     score,
                     status,
                     reason,
@@ -131,6 +213,8 @@ def link(
         "name_similarity",
         "manufacturer_exact",
         "brand_in_recall",
+        "model_exact",
+        "gtin_exact",
         "score",
         "confidence",
         "reason",
@@ -173,3 +257,31 @@ def review_sample(
         on="recall_id",
         validate="many_to_one",
     )
+
+
+def reference_coverage(
+    audit: pd.DataFrame, reference: pd.DataFrame, horizon_days: int
+) -> dict:
+    """Measure agreement with earlier candidate links using independently recorded dates."""
+    keys = ["report_id", "recall_id"]
+    reference = reference.copy()
+    if reference[keys].eq("").any().any() or reference.duplicated(keys).any():
+        raise ValueError("Reference pairs must have unique, nonempty identifiers")
+    dates = pd.to_datetime(reference["Date"], format="mixed", errors="raise")
+    reports = pd.to_datetime(reference["Report Date"], format="mixed", errors="raise")
+    reference["eligible"] = (dates - reports).dt.days.between(1, horizon_days)
+    outcomes = reference.merge(
+        audit[[*keys, "confidence"]], how="left", on=keys, validate="one_to_one"
+    )
+    return {
+        name: {
+            "reference_pairs": len(rows),
+            "candidate_pairs": int(rows.confidence.notna().sum()),
+            "review_pairs": int(rows.confidence.eq("review").sum()),
+            "high_pairs": int(rows.confidence.eq("high").sum()),
+        }
+        for name, rows in (
+            ("all", outcomes),
+            ("date_eligible", outcomes.loc[outcomes.eligible]),
+        )
+    }

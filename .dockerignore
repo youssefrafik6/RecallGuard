@@ -1,0 +1,9 @@
+**
+!requirements.txt
+!pyproject.toml
+!src/
+!src/**
+!app.py
+!training_data.csv
+!.streamlit/
+!.streamlit/config.toml

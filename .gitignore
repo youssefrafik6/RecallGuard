@@ -222,3 +222,6 @@ __marimo__/
 /data/processed/
 /models/*.joblib
 /results/runs/
+
+# Additional local verification environments
+.venv-*/

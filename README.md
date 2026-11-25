@@ -1,86 +1,85 @@
-## What makes this project different?
-
-A major part of this project was not just training a classifier, but building a usable supervised dataset from two messy public CPSC files that could not be directly joined. That data-linkage and label-construction step was the foundation for all later modeling results.
-
 # RecallGuard
 
-RecallGuard is a Data Science capstone project that estimates product recall risk from consumer safety complaints.
+**Consumer Product Recall Risk Analysis Using NLP, Machine Learning, and Record Linkage**
 
-The project starts with two public datasets from the U.S. Consumer Product Safety Commission (CPSC): consumer incident reports and official recall listings. Because these files do not share a clean product ID, I built a custom linkage pipeline to connect them and create a supervised training dataset. I then trained and compared multiple machine learning models, performed category-specific analysis, and built a Streamlit app that turns the project into a practical risk-assessment tool.
+CPSC incident reports and official recall listings lack a shared product identifier. RecallGuard builds auditable candidate links between the two sources, then uses the original capstone's labeled dataset to test how well NLP classifiers rank retrospective recall associations. The project includes an offline training CLI, a Streamlit dashboard, and a FastAPI service.
 
-## Project Goal
+## Verified benchmark
 
-The goal of RecallGuard is to identify products that look similar to products that were eventually recalled, based on complaint text and product details. The system is designed as an early-warning / triage tool, not as a replacement for official recall decisions.
+The 3,780-row capstone dataset includes 420 linked incidents. With seed 42, each model was selected by validation average precision (AP), then scored on a held-out test partition.
 
-## Key Features
+| Holdout | Validation-selected model | Test AP | Test F1 |
+| --- | --- | ---: | ---: |
+| Random rows | Logistic regression | 0.551 | 0.562 |
+| Product groups | Logistic regression | 0.412 | 0.402 |
+| Chronological, with product-group purging | XGBoost | 0.144 | 0.019 |
 
-- Custom linkage pipeline to connect incident reports with recall listings
-- Rebuilt supervised training dataset from messy public data
-- Text modeling with TF-IDF and character n-grams
-- Structured feature engineering with brand, manufacturer, category, and product type
-- Model comparison across:
-  - Logistic Regression
-  - Linear SVM
-  - Complement Naive Bayes
-  - XGBoost
-- Threshold tuning and SMOTE experiments
-- Category-specific modeling
-- Streamlit app for:
-  - dataset insights
-  - category insights
-  - risk scoring
-  - model details
+The chronological AP baseline was 0.128. That model recovered one of 97 linked test reports at its validation threshold. The evaluation supports retrospective association analysis and shows weak transfer to newer reports. It provides no evidence of validated prospective early warning. See the [evaluation](docs/MODEL_EVALUATION.md) and [machine-readable benchmark](results/metrics/historical_proxy_benchmark.json).
 
-## Main Results
+The original Spring 2026 capstone reported Linear SVM F1 **0.688** and Home Maintenance and Structures F1 **0.784**. These figures are preserved as historical results with their original slides and README. [Capstone slides](Slides/RecallGuard_Capstone_Project.pdf) · [Historical README](docs/CAPSTONE_README.md) · [Original app screenshots](screenshots/screenshots.pdf)
 
-- Best overall general model: **Linear SVM**
-- Best general-model F1: **0.688**
-- Strongest deeper result: **Category-specific modeling**
-- Best category-specific result:
-  - **Home Maintenance and Structures**
-  - **F1 = 0.784**
+## Quick start
 
-## Data Sources
+Use Python 3.11 or later. On systems where XGBoost requires OpenMP, make the platform's OpenMP runtime available (for example, `brew install libomp` on macOS).
 
-This project uses public data from the U.S. Consumer Product Safety Commission (CPSC):
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt -e .
+pytest -q
 
-- **Incident Reports** from SaferProducts.gov
-- **Recall Listings** from CPSC recalls data
+# Full benchmark across random, grouped and chronological designs
+recallguard train --design all
 
-## Why This Project Matters
+# Start the app with the grouped research model
+RECALLGUARD_MODEL=results/runs/group.joblib streamlit run app.py
+```
 
-Public complaint data may contain warning signs before a recall is officially announced, but the data is too large and too messy to review manually. RecallGuard shows how public safety complaint data can be turned into a practical machine learning workflow for product risk triage.
+The dashboard starts without a model and exposes the historical dataset and a synthetic linkage example. To generate a lightweight bundle for a smoke check, run `recallguard train --design group --smoke --out results/runs/smoke`. It has its own artifact path and a smaller estimator suite.
 
-## Project Pipeline
+## Architecture
 
-1. Start with two raw public CPSC files
-2. Normalize product-related fields
-3. Match incident reports to recall listings using multiple signals
-4. Assign confidence levels to matches
-5. Build a labeled training dataset
-6. Perform EDA and text analysis
-7. Engineer text, structured, and numeric features
-8. Train and compare models
-9. Extend the project into a risk-assessment app
+```mermaid
+flowchart TD
+    I[CPSC incident reports] --> V[Validate and normalize]
+    R[CPSC recall listings] --> V
+    V --> L[Block and score linkage candidates]
+    L --> A[Candidate audit and nullable proxy labels]
+    H[Original capstone labeled CSV] --> S[Random, product-grouped or chronological split]
+    S --> F[Train-only TF-IDF, categorical encoding and numeric scaling]
+    F --> T[Fit classifiers and select on validation]
+    T --> E[Calibrate separately and evaluate on holdout]
+    E --> M[Trusted local artifact and JSON metrics]
+    M --> U[Streamlit dashboard]
+    M --> P[FastAPI service]
+    A --> U
+```
 
-## Streamlit App
+The reconstructed linker bounds candidate expansion through rare product and manufacturer tokens and scores product-name overlap, fuzzy similarity, and manufacturer or brand agreement. Date and ambiguity checks protect the proxy label. Four incidents met the unique high-confidence rule on the available local exports. Unresolved incidents remain unlabeled. The historical CSV supplies the supervised benchmark while these reconstructed links await adjudication. [Data pipeline](docs/DATA_PIPELINE.md) · [Scientific validity](docs/SCIENTIFIC_VALIDITY.md)
 
-The Streamlit app includes:
+Models compare sparse word and character TF-IDF, optional structured product fields, and incident text length using pandas, scikit-learn, and XGBoost. The benchmark includes a dummy prior, logistic regression, Linear SVM, Complement NB, and XGBoost. Each run records its data fingerprint, chosen model, threshold, metrics and environment versions.
 
-- **Dataset Insights**
-- **Category Insights**
-- **Risk Explorer / Risk Scorer**
-- **Model Details**
+## Dashboard
 
-It demonstrates how the project can be used as a practical product risk-assessment tool.
+![RecallGuard overview showing grouped holdout results](screenshots/overview.png)
 
-## Repository Structure
+[Model performance screen](screenshots/model-performance.png)
 
-```text
-.
-├── app.py
-├── training_data.csv
-├── requirements.txt
-├── README.md
-├── screenshots/
-└── slides/
+## API
+
+```bash
+RECALLGUARD_MODEL=results/runs/group.joblib uvicorn recallguard.api:app
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/model-info
+curl -X POST http://127.0.0.1:8000/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"product":"Electric kettle","description":"The switch stuck and the base overheated.","category":"Kitchen"}'
+```
+
+`/docs` serves the interactive API reference. The score and feature contributions reflect the fitted proxy model. See the [API examples and Docker instructions](docs/DEPLOYMENT.md).
+
+## Research context
+
+Youssef Rafik · B.S. Data Science capstone · Southern Connecticut State University · Spring 2026. The original capstone investigated whether consumer incident reports can identify products associated with recalls. The portfolio upgrade adds an auditable reconstruction, separate model development and testing, artifact-backed serving, and local verification.
+
+[Public CPSC data](https://www.cpsc.gov/Data) · [Repository audit](docs/REPOSITORY_AUDIT.md) · [Limitations](docs/LIMITATIONS.md) · [Implementation report](docs/IMPLEMENTATION_SUMMARY.md) · [MIT license](LICENSE)

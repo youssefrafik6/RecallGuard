@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local CPSC data, model bundles and run outputs
+/data/raw/
+/data/processed/
+/models/*.joblib
+/results/runs/

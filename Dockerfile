@@ -9,7 +9,8 @@ COPY requirements.txt pyproject.toml ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 RUN pip install --no-cache-dir --no-deps .
-COPY app.py training_data.csv ./
+COPY app.py ./
+COPY data/training_data.csv ./data/training_data.csv
 COPY .streamlit ./.streamlit
 USER recallguard
 EXPOSE 8501 8000

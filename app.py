@@ -102,7 +102,7 @@ st.caption(
 
 if page in {"Overview", "Dataset explorer"}:
     try:
-        data = dataset(ROOT / "training_data.csv")
+        data = dataset(ROOT / "data" / "training_data.csv")
     except (OSError, ValueError):
         st.warning("The historical training CSV is unavailable.")
         st.stop()

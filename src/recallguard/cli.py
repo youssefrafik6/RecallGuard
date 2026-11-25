@@ -44,12 +44,15 @@ def main() -> None:
     check.add_argument("--candidates", required=True, type=Path)
     check.add_argument("--reference", required=True, type=Path)
     check.add_argument("--horizon", type=int, default=365)
+    default_data = Path("training_data.csv")
+    if not default_data.is_file():
+        default_data = Path("data/training_data.csv")
     temporal = commands.add_parser("audit-temporal")
-    temporal.add_argument("--data", type=Path, default=Path("training_data.csv"))
+    temporal.add_argument("--data", type=Path, default=default_data)
     temporal.add_argument("--group-campaigns", action="store_true")
     temporal.add_argument("--linked-observations", type=Path)
     fit = commands.add_parser("train")
-    fit.add_argument("--data", type=Path, default=Path("training_data.csv"))
+    fit.add_argument("--data", type=Path, default=default_data)
     fit.add_argument("--out", type=Path, default=Path("results/runs"))
     fit.add_argument(
         "--design", choices=["random", "group", "chronological", "all"], default="all"

@@ -4,6 +4,7 @@
 !src/
 !src/**
 !app.py
-!training_data.csv
+!data/
+!data/training_data.csv
 !.streamlit/
 !.streamlit/config.toml

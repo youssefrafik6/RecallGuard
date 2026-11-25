@@ -149,6 +149,8 @@ activemq-data/
 
 # Environments
 .env
+.env.*
+!.env.example
 .envrc
 .venv
 env/
@@ -213,6 +215,20 @@ tempCodeRunnerFile.py
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Operating system files and editor backups
+.DS_Store
+Thumbs.db
+*.swp
+*~
+*.tmp
+
+# Local credentials
+.envrc.local
+credentials.json
+service-account*.json
+*.pem
+*.key
 
 # Streamlit
 .streamlit/secrets.toml

@@ -1,6 +1,6 @@
 # Model evaluation
 
-The benchmark uses all 3,780 observations in the tracked capstone CSV (420 positives). Its SHA-256 is recorded in the [machine-readable benchmark](../results/metrics/historical_proxy_benchmark.json) alongside package versions, seed 42, partition sizes, individual variants and calibration metrics. The CLI regenerates the full ROC, PR and validation threshold curves. The historical results are reported separately in the [archived README](CAPSTONE_README.md).
+The benchmark uses all 3,780 observations in the [tracked capstone CSV](../data/training_data.csv) (420 positives). Its SHA-256 is recorded in the [machine-readable benchmark](../results/metrics/historical_proxy_benchmark.json) alongside package versions, seed 42, partition sizes, individual variants and calibration metrics. The CLI regenerates the full ROC, PR and validation threshold curves. The historical results are reported separately in the [archived README](CAPSTONE_README.md).
 
 | Design | Selected by validation AP | Test rows / positive rows | Test average precision | Test F1 | Brier |
 | --- | --- | ---: | ---: | ---: | ---: |

@@ -6,9 +6,10 @@ from sklearn import metrics
 from sklearn.model_selection import StratifiedGroupKFold, train_test_split
 
 from recallguard.data import TARGET, manufacturer_key, normalize
+from recallguard.linkage import gtin_codes
 
 
-def product_groups(frame: pd.DataFrame) -> pd.Series:
+def product_groups(frame: pd.DataFrame, group_campaigns: bool = False) -> pd.Series:
     """Join overlapping UPC, manufacturer/model and exact product description proxies."""
     parents = list(range(len(frame)))
     seen = {}
@@ -28,6 +29,13 @@ def product_groups(frame: pd.DataFrame) -> pd.Series:
             keys.append(("upc", upc))
         if maker and model:
             keys.append(("model", maker, model))
+        if group_campaigns:
+            campaign = getattr(row, "recall_campaign", "").strip()
+            if campaign:
+                keys.append(("recall_campaign", campaign))
+            keys.extend(("gtin", code) for code in sorted(gtin_codes(upc)))
+            if maker and model:
+                keys.append(("model_compact", maker, model.replace(" ", "")))
         if len(product) >= 12:
             keys.append(("name", product))
         for key in keys:
@@ -36,9 +44,11 @@ def product_groups(frame: pd.DataFrame) -> pd.Series:
     return pd.Series([root(index) for index in range(len(frame))], index=frame.index)
 
 
-def partitions(frame: pd.DataFrame, design: str, seed: int) -> tuple[list, pd.Series]:
+def partitions(
+    frame: pd.DataFrame, design: str, seed: int, group_campaigns: bool = False
+) -> tuple[list, pd.Series]:
     """Return training, validation, calibration and test sets in that order."""
-    groups = product_groups(frame)
+    groups = product_groups(frame, group_campaigns)
     ids = frame.index.to_numpy()
     if design == "random":
         remaining, test = train_test_split(

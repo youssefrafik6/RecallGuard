@@ -20,6 +20,10 @@ INCIDENT = {
     "Product Type": "product_type",
     "Model Name or Number": "model",
     "UPC": "upc",
+    "recall_index": "recall_campaign",
+    "Publication Date": "publication_date",
+    "best_confidence": "historical_confidence",
+    "match_rule": "historical_match_rule",
 }
 RECALL = {
     "Recall Number": "recall_id",
@@ -88,7 +92,7 @@ def read_export(
         if field not in frame:
             frame[field] = ""
         frame[field] = frame[field].fillna("").str.strip()
-    for field in ("report_date", "recall_date"):
+    for field in ("report_date", "recall_date", "publication_date"):
         if field in frame:
             frame[field] = pd.to_datetime(frame[field], format="mixed", errors="coerce")
             LOGGER.info(

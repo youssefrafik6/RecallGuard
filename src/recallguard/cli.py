@@ -19,6 +19,7 @@ from recallguard.linkage import (
     reference_coverage,
     review_sample,
 )
+from recallguard.temporal_audit import audit_temporal
 from recallguard.training import FEATURE_SETS, train
 
 
@@ -43,15 +44,24 @@ def main() -> None:
     check.add_argument("--candidates", required=True, type=Path)
     check.add_argument("--reference", required=True, type=Path)
     check.add_argument("--horizon", type=int, default=365)
+    temporal = commands.add_parser("audit-temporal")
+    temporal.add_argument("--data", type=Path, default=Path("training_data.csv"))
+    temporal.add_argument("--group-campaigns", action="store_true")
+    temporal.add_argument("--linked-observations", type=Path)
     fit = commands.add_parser("train")
     fit.add_argument("--data", type=Path, default=Path("training_data.csv"))
     fit.add_argument("--out", type=Path, default=Path("results/runs"))
     fit.add_argument(
         "--design", choices=["random", "group", "chronological", "all"], default="all"
     )
-    fit.add_argument("--feature-set", choices=FEATURE_SETS, default="all")
+    fit.add_argument("--feature-set", choices=(*FEATURE_SETS, "compare"), default="all")
     fit.add_argument("--seed", type=int, default=42)
     fit.add_argument("--smoke", action="store_true")
+    fit.add_argument(
+        "--group-campaigns",
+        action="store_true",
+        help="Group historical recall campaigns and standardized identifiers",
+    )
     fit.add_argument(
         "--selection", choices=["average_precision", "f1"], default="average_precision"
     )
@@ -98,6 +108,21 @@ def main() -> None:
         ).rename(columns=mappings)
         coverage = reference_coverage(candidates, reference, args.horizon)
         print(json.dumps(coverage, indent=2))
+    elif args.command == "audit-temporal":
+        frame = load_incidents(args.data, labeled=True)
+        reconstructed = None
+        if args.linked_observations:
+            observations = pd.read_csv(
+                args.linked_observations, usecols=["report_id", TARGET], dtype=str
+            )
+            reconstructed = set(
+                observations.loc[observations[TARGET].eq("1"), "report_id"]
+            )
+        print(
+            json.dumps(
+                audit_temporal(frame, args.group_campaigns, reconstructed), indent=2
+            )
+        )
     elif args.command == "train":
         frame = load_incidents(args.data, labeled=True)
         data_sha256 = fingerprint(args.data)
@@ -115,6 +140,7 @@ def main() -> None:
                 args.feature_set,
                 args.smoke,
                 selection=args.selection,
+                group_campaigns=args.group_campaigns,
             )
             bundle["metadata"].update(
                 dataset=args.data.name, dataset_sha256=data_sha256

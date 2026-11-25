@@ -162,11 +162,14 @@ def train(
     feature_set: str,
     smoke: bool = False,
     selection: str = "average_precision",
+    group_campaigns: bool = False,
 ) -> dict:
     """Freeze variant and threshold choices before computing held-out metrics."""
     if selection not in {"average_precision", "f1"}:
         raise ValueError(f"Unknown validation selection metric {selection}")
-    (training, validation, calibration, test), groups = partitions(frame, design, seed)
+    (training, validation, calibration, test), groups = partitions(
+        frame, design, seed, group_campaigns
+    )
     x_train, x_val, x_cal, x_test = map(
         feature_frame, (training, validation, calibration, test)
     )
@@ -176,8 +179,7 @@ def train(
     empty_fields = {
         field for field in ("product", "description") if x_train[field].eq("").all()
     }
-    preprocessor = preprocessing(feature_set, empty_fields).fit(x_train)
-    transformed = preprocessor.transform(x_train)
+    profiles = tuple(FEATURE_SETS) if feature_set == "compare" else (feature_set,)
     positives = np.flatnonzero(y_train.to_numpy() == 1)
     ratio = (len(y_train) - len(positives)) / len(positives)
     rng = np.random.default_rng(seed)
@@ -191,34 +193,43 @@ def train(
     )
     selected = {}
     variants = []
-    for family, variant, classifier in classifiers(seed, ratio, smoke):
-        LOGGER.info("Fitting %s / %s / %s", design, family, variant)
-        if variant == "random_oversampling":
-            classifier.fit(transformed[oversample], y_train.iloc[oversample])
-        else:
-            classifier.fit(transformed, y_train)
-        pipeline = Pipeline([("preprocess", preprocessor), ("classifier", classifier)])
-        val_raw = raw_scores(pipeline, x_val)
-        ap = float(average_precision_score(y_val, val_raw))
-        validation_f1 = float(f1_score(y_val, val_raw >= threshold_for(y_val, val_raw)))
-        objective = (validation_f1, ap) if selection == "f1" else (ap,)
-        variants.append(
-            {
-                "model": family,
-                "variant": variant,
-                "validation_average_precision": ap,
-                "validation_f1": validation_f1,
-            }
-        )
-        if family not in selected or objective > selected[family][0]:
-            selected[family] = (
-                objective,
-                variant,
-                pipeline,
-                val_raw,
-                ap,
-                validation_f1,
+    for profile in profiles:
+        preprocessor = preprocessing(profile, empty_fields).fit(x_train)
+        transformed = preprocessor.transform(x_train)
+        for family, variant, classifier in classifiers(seed, ratio, smoke):
+            LOGGER.info("Fitting %s / %s / %s / %s", design, profile, family, variant)
+            if variant == "random_oversampling":
+                classifier.fit(transformed[oversample], y_train.iloc[oversample])
+            else:
+                classifier.fit(transformed, y_train)
+            pipeline = Pipeline(
+                [("preprocess", preprocessor), ("classifier", classifier)]
             )
+            val_raw = raw_scores(pipeline, x_val)
+            ap = float(average_precision_score(y_val, val_raw))
+            validation_f1 = float(
+                f1_score(y_val, val_raw >= threshold_for(y_val, val_raw))
+            )
+            objective = (validation_f1, ap) if selection == "f1" else (ap,)
+            variants.append(
+                {
+                    "model": family,
+                    "feature_set": profile,
+                    "variant": variant,
+                    "validation_average_precision": ap,
+                    "validation_f1": validation_f1,
+                }
+            )
+            if family not in selected or objective > selected[family][0]:
+                selected[family] = (
+                    objective,
+                    variant,
+                    pipeline,
+                    val_raw,
+                    ap,
+                    validation_f1,
+                    profile,
+                )
 
     winner = max(
         (family for family in selected if family != "dummy"),
@@ -226,7 +237,15 @@ def train(
     )
     comparisons = {}
     artifact = {}
-    for family, (_, variant, pipeline, val_raw, ap, validation_f1) in selected.items():
+    for family, (
+        _,
+        variant,
+        pipeline,
+        val_raw,
+        ap,
+        validation_f1,
+        profile,
+    ) in selected.items():
         calibration_raw = raw_scores(pipeline, x_cal)
         calibrator = LogisticRegression(C=10.0, solver="lbfgs").fit(
             calibration_raw.reshape(-1, 1), y_cal
@@ -246,10 +265,14 @@ def train(
         comparisons[family] = {
             **report,
             "variant": variant,
+            "feature_set": profile,
             "validation_average_precision": ap,
             "validation_f1": validation_f1,
             "threshold": threshold,
             "default_threshold_f1": default["f1"],
+            "calibration_slope": float(calibrator.coef_[0, 0]),
+            "test_score_median": float(np.median(scores)),
+            "test_flagged": int(np.sum(scores >= threshold)),
             "brier": brier_score_loss(y_test, scores),
             "log_loss": log_loss(y_test, scores),
             "reliability": {
@@ -307,6 +330,7 @@ def train(
             "smoke": smoke,
             "selected": winner,
             "selection": selection,
+            "group_campaigns": group_campaigns,
             "partitions": summaries,
             "excluded_rows": len(frame)
             - sum(map(len, (training, validation, calibration, test))),

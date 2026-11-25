@@ -42,3 +42,41 @@ recallguard train --design group --selection f1 --feature-set fielded \
   --out results/runs/f1-fielded
 RECALLGUARD_MODEL=results/runs/f1-fielded/group.joblib streamlit run app.py
 ```
+
+## Chronological generalization follow-up
+
+Both runs use the previously inspected January 19, 2023 to December 30, 2025 holdout of 756 reports, including 97 positive proxy labels. This is a retrospective replay with a chronologically later test set. No test labels or test scores selected a family, feature set, weight or operating threshold. Across four TF-IDF profiles, estimators and weights were fit on training only, and selected by maximum validation F1 with average precision as the tie-breaker. The four profiles were combined word and character features with structured fields, combined text only, word-only TF-IDF, and separate product and narrative TF-IDF with structured fields. A distinct, later pre-test partition fitted a sigmoid to each selected family. Validation fixed the operating threshold and test evaluation was performed after choices were frozen.
+
+The stricter primary run additionally groups matching historical recall indices, checksum-equivalent GTINs, and manufacturer/model pairs with punctuation differences. Historical indices include tentative links on some legacy negatives and are used only to purge, never as scoring features. In the original proxy grouping 32 test positives shared a campaign with an earlier positive, and 83 test rows shared any archived campaign candidate with an earlier row. The strict run reduced both counts to zero, preserved the test cohort, and excluded 476 rows overall versus 269 in the earlier split. Remaining product aliases or identity errors can still evade grouping.
+
+| Strict chronological model | Validation F1 | Precision | Recall | F1 | AP | P@10 | P@25 | P@50 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Dummy prior | 0.094 | 0.128 | 1.000 | 0.227 | 0.128 | 0.10 | 0.08 | 0.10 |
+| **Weighted Logistic Regression, separate text fields** | **0.235** | **0.115** | **0.062** | **0.081** | **0.123** | **0.10** | **0.08** | **0.10** |
+| Weighted Linear SVM, combined text and structured features | 0.234 | 0.136 | 0.082 | 0.103 | 0.114 | 0.00 | 0.08 | 0.14 |
+| Complement Naive Bayes, combined text and structured features | 0.140 | 0.134 | 0.412 | 0.202 | 0.122 | 0.10 | 0.12 | 0.08 |
+| Weighted XGBoost, word-only TF-IDF | 0.168 | 0.145 | 0.433 | 0.218 | 0.152 | 0.10 | 0.16 | 0.18 |
+
+Bold marks the model selected before test. XGBoost's higher observed test F1 came from flagging 289 reports and recovering 42 positives. It remained below the flag-everything dummy on F1. The dummy has tied scores, so its observed precision at K depends on tie order. For a random review budget, expected precision is the test prevalence of 0.128.
+
+On the original proxy-only split, the expanded search selected a fielded SVM using validation F1. Its test F1 was 0.035, AP was 0.125, precision was 0.125, recall was 0.021 and P@25 was 0.12. The original AP-selected XGBoost result was 0.019 F1 with 0.144 AP. The strict Logistic Regression model reached F1 0.081 by recovering six positives among 52 flags. Its P@25 was two positives in 25 and its AP was below the prevalence baseline. Its validation-selected threshold was 0.1235. The default calibrated cutoff of 0.5 flagged no positives. Its Brier score was 0.1144 versus 0.1134 for the constant dummy, so calibration gave interpretable proxy scores without evidence of a calibration gain on the test period.
+
+### Why transfer was weak
+
+- **Temporal shift.** In the stricter replay, 424 of 756 test rows had a nonblank normalized manufacturer unseen in training. Manufacturer total variation was 0.761 on a zero-to-one scale, versus 0.097 for product category. About 6.4% of test token occurrences were unseen in training. TF-IDF mainly learns historical names and wording, and the feature allowlist deliberately lacks raw part identifiers and later recall information.
+- **Class imbalance and campaign concentration.** The strict split contained 23/1,269 training positives (1.8%), 31/626 validation positives (5.0%), 58/653 calibration positives (8.9%) and 97/756 test positives (12.8%). The training positives represented 20 historical campaigns. Reweighting changes the relative training loss and cannot replace unseen positive examples. These are observed shares in a sampled retrospective dataset.
+- **Label and linkage differences.** Eleven of 23 strict training positives were historically medium confidence, versus 16 of 97 test positives. The 365-day identifier-aware reconstruction agreed on 39 of the 97 historical test positives and yielded no new high-confidence positives among the other test rows. The rules and outcome windows differ, and neither method supplies independently reviewed truth. This comparison cannot estimate false-negative or false-positive rates.
+- **Missing identity and availability evidence.** Among 756 test reports, 530 had a blank UPC and 103 a blank model field. The median filing-to-publication delay was 20 days. Raw recall dates previously showed some reconstructed legacy links were already announced when the incident went public. File-date ordering alone cannot verify that the feature values and labels would have been available at each forecast cutoff.
+
+### Defensible use and next evaluation
+
+Use the linker as a **review queue for associating incident reports with already published recall records**. Show the evidence and competing matches, and let reviewers confirm or reject them. Evaluate that workflow on a blinded, adjudicated sample including ambiguous matches and unmatched incidents. Measure precision at the team's review budget and reviewer time. For a future-recall model, collect point-in-time public report snapshots, define a fixed horizon from publication, wait until outcomes mature, and evaluate on a new cohort with rolling cutoffs and product/campaign purging.
+
+```bash
+recallguard audit-temporal --group-campaigns \
+  --linked-observations data/processed/observations.csv
+recallguard train --design chronological --feature-set compare --selection f1 \
+  --group-campaigns --out results/runs/temporal-strict
+```
+
+Omit `--group-campaigns` to replay the original product-proxy grouping. The aggregate report includes both configurations and the validation candidate metrics. [Machine-readable temporal benchmark](../results/metrics/temporal_generalization_benchmark.json)

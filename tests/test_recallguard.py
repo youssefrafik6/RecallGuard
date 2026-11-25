@@ -287,3 +287,33 @@ def test_f1_selection_with_fielded_text(historical):
     names = bundle["pipeline"].named_steps["preprocess"].get_feature_names_out()
     assert any(name.startswith("product_word__") for name in names)
     assert all(not name.startswith("description_word__") for name in names)
+
+
+def test_campaign_purge_and_cross_profile_selection(historical):
+    frame = historical.assign(recall_campaign="")
+    frame.loc[[0, 117], "recall_campaign"] = "17"
+    splits, groups = partitions(frame, "chronological", 42, group_campaigns=True)
+    assert groups.loc[0] == groups.loc[117]
+    assert 117 in splits[-1].index
+    assert all(0 not in part.index for part in splits)
+    bundle = train(
+        frame,
+        "chronological",
+        42,
+        "compare",
+        smoke=True,
+        selection="f1",
+        group_campaigns=True,
+    )
+    metadata = bundle["metadata"]
+    assert metadata["test_rows_sharing_earlier_product_proxy"] == 0
+    assert {row["feature_set"] for row in metadata["variants"]} == {
+        "all",
+        "text",
+        "word",
+        "fielded",
+    }
+    winner = metadata["comparison"][metadata["selected"]]
+    assert winner["validation_f1"] == max(
+        row["validation_f1"] for row in metadata["variants"] if row["model"] != "dummy"
+    )

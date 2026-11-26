@@ -132,7 +132,7 @@ def test_grouping_joins_campaigns_models_and_incidents_but_not_manufacturer_alon
 
 
 def test_scorer_returns_finite_association_for_a_new_report():
-    model = evaluation.fit_scorer(reports())
+    model = evaluation.develop_scorer(reports())["model"]
     X = prepare_features(reports(2).assign(Brand="new brand"))
     probabilities = model.predict_proba(X)
     assert probabilities.shape == (2, 2)

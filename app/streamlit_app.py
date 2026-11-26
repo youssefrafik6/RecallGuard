@@ -1,11 +1,13 @@
+import json
+from hashlib import file_digest
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from evaluation import category_insights, develop, evaluate_holdout, fit_scorer
+from evaluation import category_insights, develop_scorer
 from features import DATA_PATH, load_data, prepare_prediction
-from overlap import related_reports
 from risk import (
     SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MODERATE,
     composite_risk_score, compute_severity_score, hazard_tokens,
@@ -138,33 +140,24 @@ def cached_data(path, modified_ns):
     return load_data(path)
 
 
-@st.cache_resource(show_spinner="Selecting models using development folds…")
-def cached_development(frame):
-    return develop(frame)
-
-
-@st.cache_resource(show_spinner="Fitting the review scorer…")
+@st.cache_resource(show_spinner="Fitting the historical association model…")
 def cached_scorer(frame):
-    return fit_scorer(frame)
+    return develop_scorer(frame)
 
 
 @st.cache_data(show_spinner=False)
 def cached_categories(frame):
-    return category_insights(cached_development(frame))
+    return category_insights(cached_scorer(frame))
 
 
-@st.cache_data(show_spinner="Running the grouped sensitivity evaluation…")
-def cached_evaluation(frame):
-    random = cached_development(frame)
-    groups, _ = related_reports(frame)
-    grouped = develop(frame, groups)
-    return (
-        evaluate_holdout(frame, random),
-        grouped["winner"].name,
-        grouped["winner"].threshold,
-        grouped["winner"].cv_metrics,
-        evaluate_holdout(frame, grouped),
-    )
+@st.cache_data(show_spinner=False)
+def cached_benchmark(data_path, report_path, data_modified_ns, report_modified_ns):
+    with data_path.open("rb") as data_file:
+        digest = file_digest(data_file, "sha256").hexdigest()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    if report["metadata"]["dataset_sha256"] != digest:
+        raise ValueError("The benchmark was generated from a different dataset.")
+    return report
 
 
 try:
@@ -294,8 +287,8 @@ elif page == "Category Insights":
     )
 
     cat_results, cat_keywords = cached_categories(df)
-    st.caption("Metrics summarize the selected general classifier’s out-of-fold development "
-               "predictions by category. Keyword models use development records only.")
+    st.caption("Metrics summarize the scorer’s logistic regression predictions on the "
+               "development folds by category. Keyword models use development records only.")
     available_cats = sorted(cat_keywords)
 
     if not available_cats:
@@ -617,7 +610,7 @@ elif page == "Risk Scorer":
             st.warning(str(error))
         else:
             try:
-                scorer = cached_scorer(df)
+                scorer = cached_scorer(df)["model"]
                 association = scorer.predict_proba(input_row)[0, 1]
             except ValueError as error:
                 st.error(f"Could not score this report. {error}")
@@ -765,24 +758,35 @@ elif page == "Model Details":
     st.caption("The bundled data and original random holdout informed prior capstone "
                "development. Both holdouts below are retrospective. Candidate and threshold "
                "selection for this run uses development folds only.")
-    if st.button("Run retrospective evaluation"):
-        st.session_state["show_evaluation"] = True
-    if not st.session_state.get("show_evaluation"):
+    report_path = DATA_PATH.with_name("evaluation_results.json")
+    try:
+        report = cached_benchmark(
+            DATA_PATH, report_path, DATA_PATH.stat().st_mtime_ns, report_path.stat().st_mtime_ns,
+        )
+    except (OSError, ValueError, KeyError) as error:
+        st.error(f"Benchmark report unavailable. {error}")
+        st.code("python app/evaluation.py > data/evaluation_results.json", language="bash")
         st.stop()
-    development = cached_development(df)
-    winner = development["winner"]
-    random_test, grouped_name, grouped_threshold, grouped_cv, grouped_test = cached_evaluation(df)
+
+    random = report["random"]
+    display_name = random["selection"]["model"]
+    random_test = random["retrospective_holdout"]
     m = random_test["metrics"]
-    comparison = pd.DataFrame([
-        {"Split": "Original random", "Selected model": winner.name,
-         "Development CV F1": winner.cv_metrics["f1"],
-         "Tuned cutoff": winner.threshold, "Holdout rows": random_test["rows"],
-         "Holdout positives": random_test["positives"], "Holdout F1": m["f1"]},
-        {"Split": "Related-report grouped", "Selected model": grouped_name,
-         "Development CV F1": grouped_cv["f1"], "Tuned cutoff": grouped_threshold,
-         "Holdout rows": grouped_test["rows"], "Holdout positives": grouped_test["positives"],
-         "Holdout F1": grouped_test["metrics"]["f1"]},
-    ])
+    comparison = []
+    for name, key in (("Original random", "random"), ("Related-report grouped", "grouped")):
+        result = report[key]
+        selection = result["selection"]
+        holdout = result["retrospective_holdout"]
+        comparison.append({
+            "Split": name,
+            "Selected model": selection["model"],
+            "Development CV F1": result["development_cv"][selection["model"]]["f1"],
+            "Tuned cutoff": selection["threshold"],
+            "Holdout rows": holdout["rows"],
+            "Holdout positives": holdout["positives"],
+            "Holdout F1": holdout["metrics"]["f1"],
+        })
+    comparison = pd.DataFrame(comparison)
     st.dataframe(comparison, hide_index=True)
     st.caption("An empty tuned cutoff indicates the classifier’s default decision rule. "
                "Development CV scores were used to select candidates and can be optimistic.")
@@ -795,8 +799,6 @@ elif page == "Model Details":
 
     # Display 5 metric cards in a row
     c1, c2, c3, c4, c5 = st.columns(5)
-
-    display_name = winner.name
 
     c1.metric("Selected Model", display_name)
     c2.metric("Accuracy", f"{m['accuracy']:.4f}")
@@ -845,7 +847,7 @@ elif page == "Model Details":
         )
 
         # Build a DataFrame from all model results and sort by F1
-        results_table = pd.DataFrame({name: result.cv_metrics for name, result in development["families"].items()}).T
+        results_table = pd.DataFrame(random["development_cv"]).T
         results_table.index.name = "Model"
         results_table = results_table.sort_values("f1", ascending=False)
 
@@ -870,7 +872,7 @@ elif page == "Model Details":
     # Highlight the best model in blue, rest in gray
     bar_colors = []
     for name in bar_data["Model"]:
-        if name == winner.name:
+        if name == display_name:
             bar_colors.append("#3b82f6")
         else:
             bar_colors.append("#334155")

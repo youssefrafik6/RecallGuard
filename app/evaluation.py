@@ -2,6 +2,9 @@
 
 import argparse
 import json
+from hashlib import file_digest
+from importlib.metadata import version
+from platform import python_version
 from dataclasses import dataclass
 from itertools import product
 
@@ -19,7 +22,7 @@ from sklearn.svm import LinearSVC
 from sklearn.utils.class_weight import compute_sample_weight
 from xgboost import XGBClassifier
 
-from features import ALL_STOPWORDS, build_preprocessor, load_data, prepare_features
+from features import ALL_STOPWORDS, DATA_PATH, build_preprocessor, load_data, prepare_features
 from overlap import overlap_counts, related_reports
 
 SEED = 42
@@ -183,14 +186,15 @@ def develop(frame, groups=None):
     }
 
 
-def fit_scorer(frame):
-    """Fit the scorer's logistic regression without running the full benchmark."""
+def develop_scorer(frame):
+    """Fit the logistic regression used for scoring and category insights."""
     train, _ = split_indices(frame["label_recalled"])
     training = frame.iloc[train]
     X, y = prepare_features(training), training["label_recalled"]
     logistic_options = [option for option in candidates() if option.name == LR]
     _, families = select_model(X, y, options=logistic_options)
-    return fit_selected(X, y, families[LR])
+    selection = families[LR]
+    return {"X": X, "y": y, "winner": selection, "model": fit_selected(X, y, selection)}
 
 
 def evaluate_holdout(frame, development):
@@ -274,13 +278,24 @@ def summarize(development, holdout):
     }
 
 
+def benchmark_metadata(path=DATA_PATH):
+    with path.open("rb") as data_file:
+        digest = file_digest(data_file, "sha256").hexdigest()
+    packages = ("pandas", "numpy", "scikit-learn", "imbalanced-learn", "xgboost")
+    return {
+        "dataset_sha256": digest,
+        "python": python_version(),
+        "dependencies": {package: version(package) for package in packages},
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audit-only", action="store_true", help="Inspect the split without fitting models")
     args = parser.parse_args()
     frame = load_data()
     groups, buckets = related_reports(frame)
-    results = {"audit": audit(frame, groups, buckets)}
+    results = {"metadata": benchmark_metadata(), "audit": audit(frame, groups, buckets)}
     if not args.audit_only:
         # Freeze both experiments before inspecting either holdout result.
         random = develop(frame)

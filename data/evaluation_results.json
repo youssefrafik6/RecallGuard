@@ -1,0 +1,376 @@
+{
+  "metadata": {
+    "dataset_sha256": "ce113b9294941e6aefb89649ab4e55c76809ac342d531b192cc9b52d155c8470",
+    "python": "3.11.13",
+    "dependencies": {
+      "pandas": "3.1.1",
+      "numpy": "2.4.6",
+      "scikit-learn": "1.9.1",
+      "imbalanced-learn": "0.14.2",
+      "xgboost": "3.2.0"
+    }
+  },
+  "audit": {
+    "columns": [
+      "Report No.",
+      "Report Date",
+      "Sent to Manufacturer / Importer / Private Labeler",
+      "Publication Date",
+      "Category of Submitter",
+      "Product Description",
+      "Product Category",
+      "Product Sub Category",
+      "Product Type",
+      "Product Code",
+      "Manufacturer / Importer / Private Labeler Name",
+      "Brand",
+      "Model Name or Number",
+      "Serial Number",
+      "UPC",
+      "Date Manufactured",
+      "Manufacturer Date Code",
+      "Retailer",
+      "Retailer State",
+      "Purchase Date",
+      "Purchase Date Is Estimate",
+      "Incident Description",
+      "City",
+      "State",
+      "ZIP",
+      "Location",
+      "(Primary) Victim Severity",
+      "(Primary) Victim's Sex",
+      "My Relation To The (Primary) Victim",
+      "(Primary) Victim's Age (years)",
+      "Submitter Has Product",
+      "Product Was Damaged Before Incident",
+      "Damage Repaired",
+      "Product Was Modified Before Incident",
+      "Have You Contacted The Manufacturer",
+      "If Not Do You Plan To",
+      "Answer Explanation",
+      "Company Comments",
+      "incident_index",
+      "Brand_norm",
+      "Manufacturer_norm",
+      "Model_norm",
+      "UPC_norm",
+      "ProductCode_norm",
+      "Category_norm",
+      "SubCategory_norm",
+      "Type_norm",
+      "ReportDate_dt",
+      "match_text",
+      "inc_tokens",
+      "best_confidence",
+      "recall_index",
+      "match_rule",
+      "token_overlap",
+      "brand_hit",
+      "manufacturer_hit",
+      "category_hit",
+      "upc_hit",
+      "model_hit",
+      "productcode_hit",
+      "fuzzy_similarity",
+      "shared_tokens",
+      "promoted_medium",
+      "label_recalled"
+    ],
+    "rows": 3780,
+    "exact_duplicate_records": 0,
+    "duplicate_report_numbers": 0,
+    "related_components": 3220,
+    "largest_component": 79,
+    "match_coverage": {
+      "report number": {
+        "keys": 3780,
+        "rows": 3780
+      },
+      "manufacturer": {
+        "keys": 1186,
+        "rows": 3780
+      },
+      "brand": {
+        "keys": 1791,
+        "rows": 3666
+      },
+      "manufacturer + model": {
+        "keys": 2926,
+        "rows": 3211
+      },
+      "brand + model": {
+        "keys": 2941,
+        "rows": 3145
+      },
+      "exact normalized incident": {
+        "keys": 3779,
+        "rows": 3780
+      },
+      "recall candidate": {
+        "keys": 273,
+        "rows": 724
+      },
+      "UPC": {
+        "keys": 264,
+        "rows": 269
+      },
+      "near incident": {
+        "keys": 2,
+        "rows": 4
+      }
+    },
+    "random": {
+      "train_rows": 3024,
+      "train_positives": 336,
+      "test_rows": 756,
+      "test_positives": 84,
+      "overlap": {
+        "report number": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "manufacturer": {
+          "shared_keys": 187,
+          "test_rows": 582
+        },
+        "brand": {
+          "shared_keys": 148,
+          "test_rows": 405
+        },
+        "manufacturer + model": {
+          "shared_keys": 59,
+          "test_rows": 73
+        },
+        "brand + model": {
+          "shared_keys": 44,
+          "test_rows": 54
+        },
+        "exact normalized incident": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "recall candidate": {
+          "shared_keys": 50,
+          "test_rows": 106
+        },
+        "UPC": {
+          "shared_keys": 3,
+          "test_rows": 4
+        },
+        "near incident": {
+          "shared_keys": 1,
+          "test_rows": 1
+        }
+      }
+    },
+    "grouped": {
+      "train_rows": 3025,
+      "train_positives": 337,
+      "test_rows": 755,
+      "test_positives": 83,
+      "overlap": {
+        "report number": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "manufacturer": {
+          "shared_keys": 162,
+          "test_rows": 565
+        },
+        "brand": {
+          "shared_keys": 143,
+          "test_rows": 421
+        },
+        "manufacturer + model": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "brand + model": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "exact normalized incident": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "recall candidate": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "UPC": {
+          "shared_keys": 0,
+          "test_rows": 0
+        },
+        "near incident": {
+          "shared_keys": 0,
+          "test_rows": 0
+        }
+      }
+    }
+  },
+  "random": {
+    "development_cv": {
+      "Logistic Regression": {
+        "accuracy": 0.9315476190476191,
+        "precision": 0.7721518987341772,
+        "recall": 0.5446428571428571,
+        "f1": 0.6387434554973822
+      },
+      "Logistic Regression (tuned threshold)": {
+        "accuracy": 0.9282407407407407,
+        "precision": 0.7030716723549488,
+        "recall": 0.6130952380952381,
+        "f1": 0.6550079491255962
+      },
+      "Linear SVM": {
+        "accuracy": 0.9341931216931217,
+        "precision": 0.7751004016064257,
+        "recall": 0.5744047619047619,
+        "f1": 0.6598290598290598
+      },
+      "ComplementNB": {
+        "accuracy": 0.9173280423280423,
+        "precision": 0.6853448275862069,
+        "recall": 0.4732142857142857,
+        "f1": 0.5598591549295775
+      },
+      "XGBoost": {
+        "accuracy": 0.9110449735449735,
+        "precision": 0.7189542483660131,
+        "recall": 0.3273809523809524,
+        "f1": 0.4498977505112474
+      },
+      "Random Forest": {
+        "accuracy": 0.9133597883597884,
+        "precision": 0.7466666666666667,
+        "recall": 0.3333333333333333,
+        "f1": 0.4609053497942387
+      },
+      "SGD Classifier": {
+        "accuracy": 0.9279100529100529,
+        "precision": 0.7062937062937062,
+        "recall": 0.6011904761904762,
+        "f1": 0.6495176848874598
+      },
+      "LR + SMOTE": {
+        "accuracy": 0.9282407407407407,
+        "precision": 0.7132616487455197,
+        "recall": 0.5922619047619048,
+        "f1": 0.6471544715447154
+      },
+      "Linear SVM + SMOTE": {
+        "accuracy": 0.9338624338624338,
+        "precision": 0.7905982905982906,
+        "recall": 0.5505952380952381,
+        "f1": 0.6491228070175439
+      }
+    },
+    "selection": {
+      "model": "Linear SVM",
+      "threshold": null
+    },
+    "retrospective_holdout": {
+      "rows": 756,
+      "positives": 84,
+      "metrics": {
+        "accuracy": 0.9338624338624338,
+        "precision": 0.7428571428571429,
+        "recall": 0.6190476190476191,
+        "f1": 0.6753246753246753
+      },
+      "confusion_matrix": [
+        [
+          654,
+          18
+        ],
+        [
+          32,
+          52
+        ]
+      ]
+    }
+  },
+  "grouped": {
+    "development_cv": {
+      "Logistic Regression": {
+        "accuracy": 0.8763636363636363,
+        "precision": 0.13725490196078433,
+        "recall": 0.020771513353115726,
+        "f1": 0.03608247422680412
+      },
+      "Logistic Regression (tuned threshold)": {
+        "accuracy": 0.6343801652892562,
+        "precision": 0.13415794481446242,
+        "recall": 0.41839762611275966,
+        "f1": 0.20317002881844382
+      },
+      "Linear SVM": {
+        "accuracy": 0.871404958677686,
+        "precision": 0.11764705882352941,
+        "recall": 0.02373887240356083,
+        "f1": 0.03950617283950617
+      },
+      "ComplementNB": {
+        "accuracy": 0.871404958677686,
+        "precision": 0.12857142857142856,
+        "recall": 0.026706231454005934,
+        "f1": 0.044226044226044224
+      },
+      "XGBoost": {
+        "accuracy": 0.8796694214876033,
+        "precision": 0.09090909090909091,
+        "recall": 0.008902077151335312,
+        "f1": 0.016216216216216217
+      },
+      "Random Forest": {
+        "accuracy": 0.8790082644628099,
+        "precision": 0.1282051282051282,
+        "recall": 0.01483679525222552,
+        "f1": 0.026595744680851064
+      },
+      "SGD Classifier": {
+        "accuracy": 0.8690909090909091,
+        "precision": 0.15294117647058825,
+        "recall": 0.03857566765578635,
+        "f1": 0.061611374407582936
+      },
+      "LR + SMOTE": {
+        "accuracy": 0.8647933884297521,
+        "precision": 0.09090909090909091,
+        "recall": 0.02373887240356083,
+        "f1": 0.03764705882352941
+      },
+      "Linear SVM + SMOTE": {
+        "accuracy": 0.8796694214876033,
+        "precision": 0.17073170731707318,
+        "recall": 0.020771513353115726,
+        "f1": 0.037037037037037035
+      }
+    },
+    "selection": {
+      "model": "Logistic Regression (tuned threshold)",
+      "threshold": 0.1
+    },
+    "retrospective_holdout": {
+      "rows": 755,
+      "positives": 83,
+      "metrics": {
+        "accuracy": 0.686092715231788,
+        "precision": 0.24671052631578946,
+        "recall": 0.9036144578313253,
+        "f1": 0.3875968992248062
+      },
+      "confusion_matrix": [
+        [
+          443,
+          229
+        ],
+        [
+          8,
+          75
+        ]
+      ]
+    }
+  }
+}

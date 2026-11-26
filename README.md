@@ -2,6 +2,12 @@
 
 RecallGuard studies whether the text and product details in consumer safety complaints are associated with historical U.S. Consumer Product Safety Commission (CPSC) recalls. This is the original Data Science capstone by **Youssef Rafik**, Southern Connecticut State University, Spring 2026. [RecallGuard V2](https://github.com/youssefrafik6/RecallGuard-V2) extends the research with candidate review, more rigorous grouped and chronological evaluation, and versioned model serving.
 
+## Live Demo
+
+[**Launch Live Demo**](https://recallguard-nmuapqgnylyxgg9b5tdsvf.streamlit.app)
+
+Explore the CPSC data, compare the retrospective benchmarks, or try an example in the Risk Scorer. The app may need time to wake up on free hosting, and the first use of Risk Scorer or Category Insights fits the shared model.
+
 ## Data and historical research
 
 The capstone linked SaferProducts.gov consumer incident reports to CPSC recall listings. The files lack a shared product identifier, so the study normalized product fields and combined model, UPC, brand, manufacturer, category, product-code, token-overlap, and fuzzy-text evidence to assign candidate matches and confidence levels. The app starts from the [bundled labeled CSV](data/training_data.csv), containing 3,780 incident reports and 420 positive linkage labels.

@@ -38,4 +38,4 @@ The original stratified random split and a related-report grouped split use the 
 
 Both holdouts come from the same historical capstone sample, and the original random holdout informed earlier development. Positive labels depend on imperfect links to recalls, unlinked cases can include missed matches, and the sampled class balance limits interpretation of scores. The grouped split tests sensitivity to measured relatedness. Estimating the chance of a future recall would require independent, chronological or prospective validation and calibration.
 
-[Dashboard walkthrough](screenshots/capstone-dashboard.pdf) · [MIT License](LICENSE)
+[Presentation and live demo guide](presentations/DEMO.md) · [Dashboard walkthrough](screenshots/capstone-dashboard.pdf) · [MIT License](LICENSE)

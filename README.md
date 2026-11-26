@@ -4,7 +4,7 @@ RecallGuard studies whether the text and product details in consumer safety comp
 
 ## Data and historical research
 
-The capstone linked SaferProducts.gov consumer incident reports to CPSC recall listings. The files lack a shared product identifier, so the study normalized product fields and combined model, UPC, brand, manufacturer, category, product-code, token-overlap, and fuzzy-text evidence to assign candidate matches and confidence levels. The [research presentation](presentations/RecallGuard_Capstone_Project.pdf) documents the original linkage and modeling work. The app starts from the [bundled labeled CSV](data/training_data.csv), containing 3,780 incident reports and 420 positive linkage labels.
+The capstone linked SaferProducts.gov consumer incident reports to CPSC recall listings. The files lack a shared product identifier, so the study normalized product fields and combined model, UPC, brand, manufacturer, category, product-code, token-overlap, and fuzzy-text evidence to assign candidate matches and confidence levels. The app starts from the [bundled labeled CSV](data/training_data.csv), containing 3,780 incident reports and 420 positive linkage labels.
 
 The models use word and character TF-IDF, encoded product fields, and numeric text features. The capstone compared linear models, naive Bayes, tree ensembles, oversampling, and category-specific models. The **historical capstone F1** was **0.688** for the general Linear SVM and **0.784** for Home Maintenance and Structures. These figures come from the original research.
 
@@ -23,7 +23,7 @@ On macOS, XGBoost also needs the OpenMP runtime (`brew install libomp` on Homebr
 
 **Dataset Insights** summarizes the linkage labels. **Category Insights** displays development-fold metrics and text associations. **Model Details** shows the historical results and the recorded random and grouped benchmarks. **Risk Scorer** loads examples or accepts a new report and combines the historical logistic regression association signal with fixed severity rules. The resulting 0–1 Combined Review Priority Score is for exploratory triage. Official safety assessments come from the CPSC.
 
-Category Insights and Risk Scorer share a logistic regression fit, cached in the Streamlit process. Model Details reads the recorded benchmark so opening the dashboard does not run the full experiment.
+Category Insights and Risk Scorer share a logistic regression fit, cached in the Streamlit process. For a live demo, submit a Risk Scorer example before presenting to warm the model. Model Details reads the recorded benchmark so opening the dashboard does not run the full experiment.
 
 ## Reproduce the retrospective evaluation
 
@@ -38,4 +38,28 @@ The original stratified random split and a related-report grouped split use the 
 
 Both holdouts come from the same historical capstone sample, and the original random holdout informed earlier development. Positive labels depend on imperfect links to recalls, unlinked cases can include missed matches, and the sampled class balance limits interpretation of scores. The grouped split tests sensitivity to measured relatedness. Estimating the chance of a future recall would require independent, chronological or prospective validation and calibration.
 
-[Presentation and live demo guide](presentations/DEMO.md) · [Dashboard walkthrough](screenshots/capstone-dashboard.pdf) · [MIT License](LICENSE)
+## Dashboard screenshots
+
+These captures show the original capstone dashboard. See the [evaluation report](EVALUATION.md) for the current benchmark and the app for the current scoring labels.
+
+### Dataset Insights
+
+![Original Dataset Insights dashboard with label balance and a sample of the records](docs/images/dataset-insights.png)
+
+### Category Insights
+
+![Original Category Insights dashboard with category metrics and text coefficients](docs/images/category-insights.png)
+
+### Risk Scorer
+
+![Original Risk Scorer form and example output](docs/images/risk-scorer.png)
+
+![Original Risk Scorer breakdown of the classifier and severity signals](docs/images/risk-scorer-breakdown.png)
+
+### Model Details
+
+![Original Model Details dashboard with a confusion matrix and model results](docs/images/model-details.png)
+
+![Original model comparison chart and metric explanations](docs/images/model-comparison.png)
+
+[MIT License](LICENSE)

@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from itertools import product
 
 import numpy as np
-from imblearn.over_sampling import SMOTE
 from sklearn.base import clone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -20,7 +19,7 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.utils.class_weight import compute_sample_weight
-from xgboost import XGBClassifier
+from threadpoolctl import threadpool_limits
 
 from features import ALL_STOPWORDS, DATA_PATH, build_preprocessor, load_data, prepare_features
 from overlap import overlap_counts, related_reports
@@ -43,14 +42,20 @@ class Candidate:
         return clone(self.estimator).fit(X, y, **kwargs)
 
 
-def candidates():
-    options = [
+def logistic_candidates():
+    return [
         Candidate(LR, LogisticRegression(
             C=c, class_weight={0: 1, 1: weight}, solver="liblinear", max_iter=4000,
             random_state=SEED,
         ))
         for c, weight in product((0.5, 1.0, 2.0), (1, 2, 3, 4))
     ]
+
+
+def candidates():
+    from xgboost import XGBClassifier
+
+    options = logistic_candidates()
     options.extend(Candidate("Linear SVM", LinearSVC(
         C=c, class_weight="balanced", max_iter=8000, random_state=SEED,
     )) for c in (0.25, 0.5, 1.0, 2.0))
@@ -118,6 +123,8 @@ class Selection:
 
 
 def _resample(X, y):
+    from imblearn.over_sampling import SMOTE
+
     minority = int(np.bincount(np.asarray(y, dtype=int)).min())
     if minority < 2:
         raise ValueError("SMOTE requires at least two observations per class in each training fold.")
@@ -191,10 +198,13 @@ def develop_scorer(frame):
     train, _ = split_indices(frame["label_recalled"])
     training = frame.iloc[train]
     X, y = prepare_features(training), training["label_recalled"]
-    logistic_options = [option for option in candidates() if option.name == LR]
-    _, families = select_model(X, y, options=logistic_options)
-    selection = families[LR]
-    return {"X": X, "y": y, "winner": selection, "model": fit_selected(X, y, selection)}
+    # The hosted scorer fits serially. Keep native libraries from
+    # oversubscribing the small Cloud CPU allocation during the cold fit.
+    with threadpool_limits(limits=1):
+        _, families = select_model(X, y, options=logistic_candidates())
+        selection = families[LR]
+        model = fit_selected(X, y, selection)
+    return {"X": X, "y": y, "winner": selection, "model": model}
 
 
 def evaluate_holdout(frame, development):
@@ -278,10 +288,12 @@ def summarize(development, holdout):
     }
 
 
-def benchmark_metadata(path=DATA_PATH):
+def benchmark_metadata(path=DATA_PATH, *, audit_only=False):
     with path.open("rb") as data_file:
         digest = file_digest(data_file, "sha256").hexdigest()
-    packages = ("pandas", "numpy", "scikit-learn", "imbalanced-learn", "xgboost")
+    packages = ("pandas", "numpy", "scikit-learn")
+    if not audit_only:
+        packages += ("imbalanced-learn", "xgboost")
     return {
         "dataset_sha256": digest,
         "python": python_version(),
@@ -295,7 +307,7 @@ def main():
     args = parser.parse_args()
     frame = load_data()
     groups, buckets = related_reports(frame)
-    results = {"metadata": benchmark_metadata(), "audit": audit(frame, groups, buckets)}
+    results = {"metadata": benchmark_metadata(audit_only=args.audit_only), "audit": audit(frame, groups, buckets)}
     if not args.audit_only:
         # Freeze both experiments before inspecting either holdout result.
         random = develop(frame)

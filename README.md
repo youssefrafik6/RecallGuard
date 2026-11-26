@@ -19,20 +19,27 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-On macOS, XGBoost also needs the OpenMP runtime (`brew install libomp` on Homebrew). You can also launch `python -m streamlit run app/streamlit_app.py`.
+You can also launch `python -m streamlit run app/streamlit_app.py`.
 
 **Dataset Insights** summarizes the linkage labels. **Category Insights** displays development-fold metrics and text associations. **Model Details** shows the historical results and the recorded random and grouped benchmarks. **Risk Scorer** loads examples or accepts a new report and combines the historical logistic regression association signal with fixed severity rules. The resulting 0–1 Combined Review Priority Score is for exploratory triage. Official safety assessments come from the CPSC.
 
 Category Insights and Risk Scorer share a logistic regression fit, cached in the Streamlit process. For a live demo, submit a Risk Scorer example before presenting to warm the model. Model Details reads the recorded benchmark so opening the dashboard does not run the full experiment.
 
+## Streamlit Community Cloud deployment
+
+In [Streamlit Community Cloud](https://share.streamlit.io/), choose **Create app** and deploy from GitHub. Use repository `youssefrafik6/RecallGuard`, branch `main`, and entry point `app.py`. Select Python 3.11 in Advanced settings and leave Secrets empty. After deploying, check that the app opens in a private browser window, then test each dashboard page and submit a Risk Scorer example. The first use of Risk Scorer or Category Insights fits the shared model and can take longer on free hosting.
+
 ## Reproduce the retrospective evaluation
 
 ```bash
 python app/evaluation.py --audit-only
+python -m pip install -r requirements-evaluation.txt
 python app/evaluation.py
 python -m pip install pytest
 python -m pytest
 ```
+
+On macOS, the full benchmark also needs the OpenMP runtime for XGBoost (`brew install libomp` on Homebrew).
 
 The original stratified random split and a related-report grouped split use the same candidate search. Each selects the classifier, hyperparameters, and any tuned cutoff using its own five development folds. Its holdout is used once to score the frozen winner per run. The [evaluation report](EVALUATION.md) describes the split audit, comparison, and limitations.
 

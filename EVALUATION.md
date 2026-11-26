@@ -1,6 +1,6 @@
 # Retrospective evaluation
 
-Run `python app/evaluation.py --audit-only` to reproduce the overlap audit, or `python app/evaluation.py` to run both model comparisons. The bundled CSV has SHA-256 `ce113b9294941e6aefb89649ab4e55c76809ac342d531b192cc9b52d155c8470`.
+Run `python app/evaluation.py --audit-only` to reproduce the overlap audit, or install `requirements-evaluation.txt` and run `python app/evaluation.py` for both model comparisons. The bundled CSV has SHA-256 `ce113b9294941e6aefb89649ab4e55c76809ac342d531b192cc9b52d155c8470`.
 
 ## Selection and holdout protocol
 

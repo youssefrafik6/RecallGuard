@@ -1,8 +1,10 @@
+# RecallGuard
+
+This repository preserves the original Southern Connecticut State University Data Science capstone and its historical results. [RecallGuard V2](https://github.com/youssefrafik6/RecallGuard-V2) extends the project with candidate review, grouped and chronological evaluation, and versioned model serving. The original model scores historical associations on the capstone sample. Its scores should not be interpreted as calibrated recall probabilities.
+
 ## What makes this project different?
 
 A major part of this project was not just training a classifier, but building a usable supervised dataset from two messy public CPSC files that could not be directly joined. That data-linkage and label-construction step was the foundation for all later modeling results.
-
-# RecallGuard
 
 RecallGuard is a Data Science capstone project that estimates product recall risk from consumer safety complaints.
 

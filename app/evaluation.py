@@ -19,6 +19,7 @@ from sklearn.naive_bayes import ComplementNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.utils.class_weight import compute_sample_weight
+from threadpoolctl import threadpool_limits
 
 from features import ALL_STOPWORDS, DATA_PATH, build_preprocessor, load_data, prepare_features
 from overlap import overlap_counts, related_reports
@@ -197,9 +198,13 @@ def develop_scorer(frame):
     train, _ = split_indices(frame["label_recalled"])
     training = frame.iloc[train]
     X, y = prepare_features(training), training["label_recalled"]
-    _, families = select_model(X, y, options=logistic_candidates())
-    selection = families[LR]
-    return {"X": X, "y": y, "winner": selection, "model": fit_selected(X, y, selection)}
+    # The hosted scorer fits serially. Keep native libraries from
+    # oversubscribing the small Cloud CPU allocation during the cold fit.
+    with threadpool_limits(limits=1):
+        _, families = select_model(X, y, options=logistic_candidates())
+        selection = families[LR]
+        model = fit_selected(X, y, selection)
+    return {"X": X, "y": y, "winner": selection, "model": model}
 
 
 def evaluate_holdout(frame, development):

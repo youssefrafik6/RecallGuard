@@ -2,13 +2,7 @@
 
 This repository preserves the original Southern Connecticut State University Data Science capstone and its historical results. [RecallGuard V2](https://github.com/youssefrafik6/RecallGuard-V2) extends the project with candidate review, grouped and chronological evaluation, and versioned model serving. The original model scores historical associations on the capstone sample. Its scores should not be interpreted as calibrated recall probabilities.
 
-## What makes this project different?
-
-A major part of this project was not just training a classifier, but building a usable supervised dataset from two messy public CPSC files that could not be directly joined. That data-linkage and label-construction step was the foundation for all later modeling results.
-
-RecallGuard is a Data Science capstone project that estimates product recall risk from consumer safety complaints.
-
-The project starts with two public datasets from the U.S. Consumer Product Safety Commission (CPSC): consumer incident reports and official recall listings. Because these files do not share a clean product ID, I built a custom linkage pipeline to connect them and create a supervised training dataset. I then trained and compared multiple machine learning models, performed category-specific analysis, and built a Streamlit app that turns the project into a practical risk-assessment tool.
+RecallGuard links U.S. Consumer Product Safety Commission incident reports to official recall listings using product, manufacturer and text evidence. The capstone used those historical links to compare classification models and explore differences by product category.
 
 ## Project Goal
 
@@ -49,10 +43,6 @@ This project uses public data from the U.S. Consumer Product Safety Commission (
 - **Incident Reports** from SaferProducts.gov
 - **Recall Listings** from CPSC recalls data
 
-## Why This Project Matters
-
-Public complaint data may contain warning signs before a recall is officially announced, but the data is too large and too messy to review manually. RecallGuard shows how public safety complaint data can be turned into a practical machine learning workflow for product risk triage.
-
 ## Project Pipeline
 
 1. Start with two raw public CPSC files
@@ -74,7 +64,6 @@ The Streamlit app includes:
 - **Risk Explorer / Risk Scorer**
 - **Model Details**
 
-It demonstrates how the project can be used as a practical product risk-assessment tool.
 
 ## Repository Structure
 

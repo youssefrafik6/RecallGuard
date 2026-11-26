@@ -2,93 +2,29 @@
 
 This repository preserves the original Southern Connecticut State University Data Science capstone and its historical results. [RecallGuard V2](https://github.com/youssefrafik6/RecallGuard-V2) extends the project with candidate review, grouped and chronological evaluation, and versioned model serving. The original model scores historical associations on the capstone sample. Its scores should not be interpreted as calibrated recall probabilities.
 
-RecallGuard links U.S. Consumer Product Safety Commission incident reports to official recall listings using product, manufacturer and text evidence. The capstone used those historical links to compare classification models and explore differences by product category.
+RecallGuard explores historical associations between consumer incident reports and U.S. Consumer Product Safety Commission (CPSC) recalls. The Streamlit app charts the labeled dataset, compares text classifiers, and scores individual reports.
 
-## Project Goal
+## Data and methodology
 
-The goal of RecallGuard is to identify products that look similar to products that were eventually recalled, based on complaint text and product details. The system is designed as an early-warning / triage tool, not as a replacement for official recall decisions.
+The [bundled CSV](data/training_data.csv) contains 3,780 labeled incident reports, including 420 positive labels. The historical linkage study used CPSC consumer incident reports and recall listings, which lack a shared product identifier. The app consumes the labeled CSV. The [research presentation](presentations/RecallGuard_Capstone_Project.pdf) documents label construction and credits Youssef Rafik, Southern Connecticut State University, Spring 2026.
 
-## Key Features
+Python, pandas and scikit-learn handle data preparation, TF-IDF features and model evaluation. Experiments include XGBoost, SMOTE via imbalanced-learn, and category-specific classifiers. Streamlit and Plotly present the results.
 
-- Custom linkage pipeline to connect incident reports with recall listings
-- Rebuilt supervised training dataset from messy public data
-- Text modeling with TF-IDF and character n-grams
-- Structured feature engineering with brand, manufacturer, category, and product type
-- Model comparison across:
-  - Logistic Regression
-  - Linear SVM
-  - Complement Naive Bayes
-  - XGBoost
-- Threshold tuning and SMOTE experiments
-- Category-specific modeling
-- Streamlit app for:
-  - dataset insights
-  - category insights
-  - risk scoring
-  - model details
+## Getting started
 
-## Main Results
-
-- Best overall general model: **Linear SVM**
-- Best general-model F1: **0.688**
-- Strongest deeper result: **Category-specific modeling**
-- Best category-specific result:
-  - **Home Maintenance and Structures**
-  - **F1 = 0.784**
-
-## Data Sources
-
-This project uses public data from the U.S. Consumer Product Safety Commission (CPSC):
-
-- **Incident Reports** from SaferProducts.gov
-- **Recall Listings** from CPSC recalls data
-
-## Project Pipeline
-
-1. Start with two raw public CPSC files
-2. Normalize product-related fields
-3. Match incident reports to recall listings using multiple signals
-4. Assign confidence levels to matches
-5. Build a labeled training dataset
-6. Perform EDA and text analysis
-7. Engineer text, structured, and numeric features
-8. Train and compare models
-9. Extend the project into a risk-assessment app
-
-## Streamlit App
-
-The Streamlit app includes:
-
-- **Dataset Insights**
-- **Category Insights**
-- **Risk Explorer / Risk Scorer**
-- **Model Details**
-
-
-## Repository Structure
-
-```text
-RecallGuard/
-├── .gitignore
-├── LICENSE
-├── README.md
-├── requirements.txt
-├── app.py                                 # Existing Streamlit launch entry point
-├── app/
-│   └── streamlit_app.py
-├── data/
-│   └── training_data.csv
-├── presentations/
-│   └── RecallGuard_Capstone_Project.pdf
-└── screenshots/
-    └── capstone-dashboard.pdf
-```
-
-Run from the repository root:
+From the repository root:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-You can also launch the application directly with `streamlit run app/streamlit_app.py`.
+The application fits models on first load and caches the result. Open **Dataset Insights** or **Category Insights** to explore the labels, **Model Details** to compare metrics, or **Risk Scorer** to enter product and incident details. The scorer combines a classifier output with a rule-based hazard severity signal.
+
+## Historical results and limitations
+
+The research presentation reports an overall F1 of 0.688 for Linear SVM and a category-specific F1 of 0.784 for Home Maintenance and Structures. These are historical experiment results. The score reflects the dataset’s linkage labels and the heuristic severity rules. Independent prospective validation would be required to estimate future recall probability.
+
+[Dashboard walkthrough](screenshots/capstone-dashboard.pdf) · [MIT License](LICENSE)

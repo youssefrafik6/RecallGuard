@@ -901,9 +901,7 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.caption(
-    "Capstone Project  ·  Youssef Rafik\n\n"
-    "Southern Connecticut State University\n\n"
-    "Data Science  ·  Spring 2026"
+    "Historical CPSC incident and recall analysis"
 )
 
 if page == "Dataset Insights":
@@ -1136,12 +1134,11 @@ elif page == "Risk Scorer":
 
     st.markdown("## Risk Scorer")
     st.caption(
-        "Enter product and incident details to estimate recall risk. "
-        "Combines the ML model prediction with a hazard-severity "
-        "analysis for a practical composite score."
+        "Enter product and incident details to combine a historical recall association "
+        "score with a rule-based severity signal."
     )
 
-    # --- Professor-requested feature: load examples from the dataset ---
+    # --- Load examples from the dataset ---
     # Initialize session_state keys for pre-filling the form fields.
     # These get set when the user clicks "Load Random Example" or picks
     # a record, and cleared when they click "Clear Fields."
@@ -1535,10 +1532,8 @@ elif page == "Model Details":
     st.markdown("""
     <div class="hero">
         <h1>RecallGuard</h1>
-        <p>A machine-learning system that estimates product recall risk
-        from CPSC incident reports. Built with TF-IDF feature engineering,
-        multi-model comparison, SMOTE oversampling, and threshold-tuned
-        classification.</p>
+        <p>Compare classifiers trained on historical CPSC recall labels using TF-IDF,
+        structured product features, oversampling, and threshold tuning.</p>
     </div>
     """, unsafe_allow_html=True)
 

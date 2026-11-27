@@ -1,10 +1,8 @@
 # RecallGuard
 
-RecallGuard studies whether the text and product details in consumer safety complaints are associated with historical U.S. Consumer Product Safety Commission (CPSC) recalls. This is the original Data Science capstone by **Youssef Rafik**, Southern Connecticut State University, Spring 2026. [RecallGuard V2](https://github.com/youssefrafik6/RecallGuard-V2) extends the research with candidate review, more rigorous grouped and chronological evaluation, and versioned model serving.
+RecallGuard studies whether the text and product details in consumer safety complaints are associated with historical U.S. Consumer Product Safety Commission (CPSC) recalls. Youssef Rafik conducted this retrospective study as his Data Science capstone at Southern Connecticut State University in Spring 2026.
 
-## Live Demo
-
-[**Launch Live Demo**](https://recallguard-nmuapqgnylyxgg9b5tdsvf.streamlit.app)
+[**Live demo**](https://recallguard-nmuapqgnylyxgg9b5tdsvf.streamlit.app/) · [Source code](https://github.com/youssefrafik6/RecallGuard) · [Evaluation](EVALUATION.md)
 
 Explore the CPSC data, compare the retrospective benchmarks, or try an example in the Risk Scorer. The app may need time to wake up on free hosting, and the first use of Risk Scorer or Category Insights fits the shared model.
 
@@ -76,3 +74,7 @@ These captures show the original capstone dashboard. See the [evaluation report]
 ![Original model comparison chart and metric explanations](docs/images/model-comparison.png)
 
 [MIT License](LICENSE)
+
+## Author
+
+Youssef Rafik
